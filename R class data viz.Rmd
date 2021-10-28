@@ -1,0 +1,205 @@
+---
+title: "Using R to plot Price indexes"
+author: "Mike J"
+date: "8/19/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## CPI Huddle  (Lets Learn R!)
+
+```{r packwd, echo=FALSE, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(readxl)
+library(ggplot2)
+library(lubridate)
+library(zoo)
+library(dplyr)
+library(scales)
+library(cowplot)
+library(forcats)
+library(ggthemes)
+
+#setwd("G:/WORKING DIRECTORY")
+#opts_knit$set(root.dir = "~G:/WORKING DIRECTORY")
+#getwd()
+```
+
+## Load the data file
+
+```{r import, echo=TRUE }
+
+ #load the data (readxl package) and check
+df<-read_excel("CPI_Demo.xlsx", sheet = "prices")
+
+tail(df )
+
+#check data
+#str(df)
+#class(df)
+```
+
+```{r transform}
+#transform date variable to a usable time series
+
+df<- df%>%mutate(date = mdy(date))
+df2<-df%>%select(date,cpi_mfe,cpi)
+
+
+df3<-df2%>%gather(measure, value, cpi_mfe,cpi,convert = FALSE)
+df3<-df3 %>% rename(Prices=measure)
+df4<-df3 %>% mutate(Prices = ifelse(Prices == "cpi", "CPI","*CORE CPI"))
+
+
+```
+
+## CPI Basic line plot using GGPLOT2 
+<br/>
+Displaying CPI and Core CPI (minus food and energy prices)
+
+
+```{r basicplt}
+#making the basic plot
+ggplot(df4,aes(x=date, y=value, group=Prices))+
+    geom_line(aes(linetype=Prices, color=Prices))
+```
+<br/>
+Lets use ggplot2's additional arguments to add details along with the scales package functions (scale_x_date and others) and using the annotate() to add the COVID-19 pandemic period.
+<br/>
+```{r addcovidpd , warning=FALSE}
+ggplot(df4,aes(x=date, y=value, group=Prices))+
+  #annotate the chart to see the period experiening covid
+  annotate("rect", xmin = as.Date("2020-03-01"), xmax = as.Date("2021-07-01"), ymin = -Inf, ymax = Inf, fill = "gray", alpha = 0.2)+
+  geom_line(aes(linetype=Prices, color=Prices))+
+  #adjust the chart so it ends at the last dates
+scale_x_date(date_breaks = "5 months",limits=c(as.Date("2019-01-01"),as.Date("2021-07-01")),labels = date_format("%b/%Y"),expand = c(0, 0))
+```
+Lets add the Federal Reserve inflation target rate to illustrate a more interesting story with this plot
+
+```{r inflation , warning=FALSE}
+ggplot(df4,aes(x=date, y=value, group=Prices))+
+  #annotate the chart to see the period experiening covid
+  annotate("rect", xmin = as.Date("2020-03-01"), xmax = as.Date("2021-07-01"), ymin = -Inf, ymax = Inf, fill = "gray", alpha = 0.2)+
+  geom_line(aes(linetype=Prices, color=Prices))+
+  #adjust the chart so it ends at the last dates
+scale_x_date(date_breaks = "5 months",limits=c(as.Date("2019-01-01"),as.Date("2021-07-01")),labels = date_format("%b/%Y"),expand = c(0, 0))+
+  #adding the federal reserve board inflation target rate
+   geom_hline(yintercept=2.0, linetype="dashed", 
+             color = "blue", size=.5)+
+    scale_linetype_manual(values=c("solid", "twodash"))
+```
+<br/>
+Lets put some text to add details and make the points of interest (COVID 19 pandemic period, Fed Inflation rate more obvious)
+
+<br/>
+
+
+```{r addtext , warning=FALSE}
+ggplot(df4,aes(x=date, y=value, group=Prices))+
+  
+  #annotate the chart to see the period experiencing covid
+  
+  annotate("rect", xmin = as.Date("2020-03-01"), xmax = as.Date("2021-07-01"), ymin = -Inf, ymax = Inf, fill = "gray", alpha = 0.2)+
+  geom_line(aes(linetype=Prices, color=Prices))+
+  
+  #adjust the chart so it ends at the last dates
+  
+scale_x_date(date_breaks = "5 months",limits=c(as.Date("2019-01-01"),as.Date("2021-07-01")),labels = date_format("%b/%Y"),expand = c(0, 0))+
+    geom_hline(yintercept=2.0, linetype="dashed", 
+             color = "blue", size=.5)+
+    scale_linetype_manual(values=c("solid", "twodash"))+
+  
+  #add the inflation traget rate with annotate()
+  
+   annotate("text", x = as.Date("2020-09-01"), y = 2.6,colour = "blue", label = "Fed Inflation Target Rate",fontface = 'italic', size=2)+
+  
+  #ADDING TEXT TO MAKE THE ABOVE POINTS OF INTEREST CLEAR!
+  
+  annotate("segment", x = as.Date("2020-09-01"), xend = as.Date("2020-09-01"), y = 2.05, yend = 2.4,colour = "blue")+
+   annotate("text", x = as.Date("2020-07-01"), y = 3.4,colour = "black", label = "COVID-19 Pandemic",fontface = 'italic',size = 2.3)
+```
+
+
+```{r addtext2 , warning=FALSE}
+line<-ggplot(df4,aes(x=date, y=value, group=Prices))+
+  #annotate the chart to see the period experiening covid
+  annotate("rect", xmin = as.Date("2020-03-01"), xmax = as.Date("2021-07-01"), ymin = -Inf, ymax = Inf, fill = "gray", alpha = 0.2)+
+  geom_line(aes(linetype=Prices, color=Prices))+
+  #adjust the chart so it ends at the last dates
+scale_x_date(date_breaks = "5 months",limits=c(as.Date("2019-01-01"),as.Date("2021-07-01")),labels = date_format("%b/%Y"),expand = c(0, 0))+
+    geom_hline(yintercept=2.0, linetype="dashed", 
+             color = "blue", size=.5)+
+    scale_linetype_manual(values=c("solid", "twodash"))+
+   annotate("text", x = as.Date("2020-09-01"), y = 2.6,colour = "blue", label = "Fed Inflation Target Rate",fontface = 'italic', size=2)+
+  annotate("segment", x = as.Date("2020-09-01"), xend = as.Date("2020-09-01"), y = 2.05, yend = 2.4,colour = "blue")+
+   annotate("text", x = as.Date("2020-07-01"), y = 3.4,colour = "black", label = "COVID-19 Pandemic",fontface = 'italic',size = 2.3)+
+ 
+    scale_color_manual(values=c('red','black'))+
+scale_y_continuous(limits = c(0, 5.5), breaks = seq(0, 5.5, by = 1),expand = c(0, 0),labels = function(value) paste0(value, "%"))+
+  labs(title = "The Economic Monitor: Inflation", 
+       caption = "*CORE Consumer Price Index excluding food and energy commodities\nAll Urban Consumers measures\nSource: Bureau Of Labor Statistics")+xlab("")+ylab("")  +
+  theme_bw()+
+  theme(panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        plot.title = element_text(size = 16, face="bold"),
+        plot.caption = element_text(hjust = 0,size = 9),
+        legend.text=element_text(size=8),
+        axis.text.x = element_text(vjust = -2))+
+    annotate("text", x = as.Date("2019-08-01"), y = 4.8,colour = "black", label = "Consumer Price Index",fontface = 'plain',size = 4.1)+
+  #adding few more text to add clarity for our readers
+  
+annotate("text", x = as.Date("2019-07-15"), y = 4.5,colour = "black", label = "12-month Percent Change",fontface = 'plain',size = 2.6)
+
+line
+#go back to slides- learning points
+```
+
+<br/>
+##Lets make a Bar plot based on Table 7 data! 
+<br/>
+
+```{r loadcat}
+df2<-read_excel("CPI_Demo.xlsx", sheet = "catJuly")
+class(df2)
+head(df2)
+
+#using dplyr package to wrangle the data
+df3<-df2%>%mutate(rounded = round(Rate, 0))%>%arrange((Rate))
+
+```
+
+```{r barplot }
+
+
+bar<-df3%>%ggplot(aes(x=reorder(Item, rounded),y=rounded,fill = rounded>0))+
+  geom_bar(stat="identity",show.legend = FALSE) +coord_flip()+
+  geom_text(aes(label = rounded),size =3, vjust = 1,hjust=1,family = "sans",fontface ="bold")+
+  scale_y_continuous(breaks = NULL,limits = c(-10,100), expand = c(0, 0))+labs(title = "12-month change in July's price",subtitle="Unadjusted")+
+  theme(axis.text.x = element_blank(),axis.title.x = element_blank(),
+        axis.title.y = element_blank(),plot.caption = element_text(hjust = 0),plot.title = element_text(size = 15,face = "bold"),
+        axis.ticks.x=element_blank())+
+  scale_fill_manual(values = c("Red2", "dodgerblue2"))+ theme_excel_new()+xlab("")+ylab("")+
+  theme(
+    plot.title = element_text(color="black", size=14, face="bold"))
+
+bar
+```
+
+<br/>
+
+## Lets put the 2 plots together to tell a story in one output
+
+<br/>
+
+```{r twoplots ,fig.width=12, warning=FALSE}
+plot_grid(line,bar)
+
+#save output to insert image into word, or maybe make a social media post! 
+
+#ggsave("CPI August.png")
+```
+
