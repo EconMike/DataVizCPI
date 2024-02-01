@@ -1,3 +1,3 @@
 # DataVizCPI
 
-Lets learn how to create some nice CPI charts in R. 
+Steps to create attractive visualizations of CPI (Price data) charts in R. 
